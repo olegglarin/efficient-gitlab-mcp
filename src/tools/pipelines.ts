@@ -308,7 +308,67 @@ export function registerPipelineTools(target: ToolRegistrationTarget, logger: Lo
       }
 
       const trace = await response.text();
+
+      // Check if trace size exceeds 500 KB (512000 bytes)
+      if (trace.length > 512000) {
+        return { content: [{ type: "text", text: "Job output exceeds 500 KB limit. Please use tool 'get_errors_from_pipeline_job_output' tool to get error lines only." }] };
+      }
+
       return { content: [{ type: "text", text: trace }] };
+    },
+  );
+
+  target.registerTool(
+    "get_errors_from_pipeline_job_output",
+    {
+      title: "Get Errors from Pipeline Job Output",
+      description: "To save context, get only lines containing 'error' from the output/trace of a GitLab pipeline job",
+      inputSchema: {
+        project_id: z.string().describe("Project ID or URL-encoded path"),
+        job_id: z.number().describe("Job ID"),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async (params) => {
+      const args = GetPipelineJobOutputSchema.parse(params);
+      const projectId = encodeProjectId(args.project_id);
+
+      const response = await fetch(
+        `${defaultClient.getApiUrl()}/projects/${projectId}/jobs/${args.job_id}/trace`,
+        {
+          headers: {
+            "PRIVATE-TOKEN": process.env.GITLAB_PERSONAL_ACCESS_TOKEN ?? "",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to get job output: ${response.status}`);
+      }
+
+      const trace = await response.text();
+      
+      // Filter for lines containing "error" (case-insensitive)
+      const lines = trace.split('\n');
+      const errorLines = lines.filter(line => 
+        line.toLowerCase().includes('error')
+      );
+      
+      if (errorLines.length === 0) {
+        return { 
+          content: [{ 
+            type: "text", 
+            text: "No error lines found in the job output."
+          }] 
+        };
+      }
+
+      return { 
+        content: [{ 
+          type: "text", 
+          text: errorLines.join('\n')
+        }] 
+      };
     },
   );
 
@@ -383,5 +443,5 @@ export function registerPipelineTools(target: ToolRegistrationTarget, logger: Lo
     },
   );
 
-  logger.debug("Pipeline tools registered", { count: 10 });
+  logger.debug("Pipeline tools registered", { count: 11 });
 }
