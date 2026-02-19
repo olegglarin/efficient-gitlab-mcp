@@ -310,7 +310,7 @@ export function registerPipelineTools(target: ToolRegistrationTarget, logger: Lo
       const trace = await response.text();
 
       // Check if trace size exceeds the limit defined in LOG_SIZE_LIMIT environment variable
-      const logSizeLimit = parseInt(process.env.LOG_SIZE ?? "1000", 10);
+      const logSizeLimit = parseInt(process.env.LOG_SIZE_LIMIT ?? "10000", 10);
       if (trace.length > logSizeLimit) {
         return { content: [{ type: "text", text: `Job output exceeds ${logSizeLimit} bytes limit. Use tool 'get_errors_from_pipeline_job_output' tool to get error lines only.` }] };
       }
@@ -323,7 +323,7 @@ export function registerPipelineTools(target: ToolRegistrationTarget, logger: Lo
     "get_errors_from_pipeline_job_output",
     {
       title: "Get Errors from Pipeline Job Output",
-      description: "To save context, get only lines containing 'error' from the output/trace of a GitLab pipeline job",
+      description: "Get the output/trace errors of a GitLab pipeline job",
       inputSchema: {
         project_id: z.string().describe("Project ID or URL-encoded path"),
         job_id: z.number().describe("Job ID"),
