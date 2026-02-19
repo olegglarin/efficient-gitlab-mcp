@@ -309,9 +309,10 @@ export function registerPipelineTools(target: ToolRegistrationTarget, logger: Lo
 
       const trace = await response.text();
 
-      // Check if trace size exceeds 500 KB (512000 bytes)
-      if (trace.length > 512000) {
-        return { content: [{ type: "text", text: "Job output exceeds 500 KB limit. Please use tool 'get_errors_from_pipeline_job_output' tool to get error lines only." }] };
+      // Check if trace size exceeds the limit defined in LOG_SIZE_LIMIT environment variable
+      const logSizeLimit = parseInt(process.env.LOG_SIZE ?? "1000", 10);
+      if (trace.length > logSizeLimit) {
+        return { content: [{ type: "text", text: `Job output exceeds ${logSizeLimit} bytes limit. Use tool 'get_errors_from_pipeline_job_output' tool to get error lines only.` }] };
       }
 
       return { content: [{ type: "text", text: trace }] };
@@ -444,4 +445,7 @@ export function registerPipelineTools(target: ToolRegistrationTarget, logger: Lo
   );
 
   logger.debug("Pipeline tools registered", { count: 11 });
+
+
+
 }
