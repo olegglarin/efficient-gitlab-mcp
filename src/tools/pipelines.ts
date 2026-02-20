@@ -312,7 +312,7 @@ export function registerPipelineTools(target: ToolRegistrationTarget, logger: Lo
       // Check if trace size exceeds the limit defined in LOG_SIZE_LIMIT environment variable
       const logSizeLimit = parseInt(process.env.LOG_SIZE_LIMIT ?? "10000", 10);
       if (trace.length > logSizeLimit) {
-        return { content: [{ type: "text", text: `Job output exceeds ${logSizeLimit} bytes limit. Use tool 'get_errors_from_pipeline_job_output' tool to get error lines only.` }] };
+        return { content: [{ type: "text", text: `Job output size exceeds ${logSizeLimit} bytes limit. Use 'get_errors_from_pipeline_job_output' tool for getting error lines.` }] };
       }
 
       return { content: [{ type: "text", text: trace }] };
@@ -322,7 +322,7 @@ export function registerPipelineTools(target: ToolRegistrationTarget, logger: Lo
   target.registerTool(
     "get_errors_from_pipeline_job_output",
     {
-      title: "Get Errors from Pipeline Job Output",
+      title: "Get Errors from Pipeline Job Output. Use when limit for Job output size is exceeded.",
       description: "Get the output/trace errors of a GitLab pipeline job",
       inputSchema: {
         project_id: z.string().describe("Project ID or URL-encoded path"),
@@ -349,11 +349,18 @@ export function registerPipelineTools(target: ToolRegistrationTarget, logger: Lo
 
       const trace = await response.text();
       
-      // Filter for lines containing "error" (case-insensitive)
+      // Filter for lines containing "error" or "failed" (case-insensitive) and include 10 lines before and after
       const lines = trace.split('\n');
-      const errorLines = lines.filter(line => 
-        line.toLowerCase().includes('error')
-      );
+      const errorLines: string[] = [];
+      lines.forEach((line, index) => {
+        if (line.toLowerCase().includes('error') || line.toLowerCase().includes('fail') || line.toLowerCase().includes('limit') ) {
+          const start = Math.max(0, index - 20);
+          const end = Math.min(lines.length, index + 21);
+          errorLines.push(...lines.slice(start, end));
+        }
+      });
+      // Remove duplicates while preserving order
+      const uniqueErrorLines = [...new Set(errorLines)];
       
       if (errorLines.length === 0) {
         return { 
