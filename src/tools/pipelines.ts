@@ -354,8 +354,8 @@ export function registerPipelineTools(target: ToolRegistrationTarget, logger: Lo
       const errorLines: string[] = [];
       lines.forEach((line, index) => {
         if (line.toLowerCase().includes('error') || line.toLowerCase().includes('fail') || line.toLowerCase().includes('limit') ) {
-          const start = Math.max(0, index - 20);
-          const end = Math.min(lines.length, index + 21);
+          const start = Math.max(0, index - 6);
+          const end = Math.min(lines.length, index + 3);
           errorLines.push(...lines.slice(start, end));
         }
       });
